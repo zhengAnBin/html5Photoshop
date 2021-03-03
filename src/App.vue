@@ -37,6 +37,12 @@
       <el-form-item label="height">
         <el-input autocomplete="off" v-model="form.height"></el-input>
       </el-form-item>
+      <el-form-item label="type">
+        <el-select v-model="form.type">
+          <el-option label="白色" value="white" />
+          <el-option label="黑色" value="block" />
+        </el-select>
+      </el-form-item>
     </el-form>
     <template #footer>
       <span class="dialog-footer">
@@ -50,7 +56,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 import { Shape } from './handle/handle.shape'
-
+import { createLayer } from './handle/handle'
 
 export default defineComponent({
   name: 'App',
@@ -60,10 +66,11 @@ export default defineComponent({
 
     const form = ref({
       width: 500,
-      height: 500
+      height: 500,
+      type: 'white'
     })
 
-    let canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D
+    let canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, idx: number
 
     const menuList = ref([
       {
@@ -80,7 +87,7 @@ export default defineComponent({
           name: '矩形',
           onClick: () => {
             if(canvas) {
-              const utilRect = new Shape(canvas, ctx)
+              const utilRect = new Shape(canvas, ctx, idx)
               utilRect.init()
             }
           }
@@ -95,14 +102,16 @@ export default defineComponent({
 
     const confirmNew = () => {
       dialogFormVisible.value = false
-      canvas = document.createElement('canvas') as HTMLCanvasElement
-      canvas.width = form.value.width
-      canvas.height = form.value.height
-      canvas.className = 'centerCSS'
-      ctx = canvas.getContext('2d') as CanvasRenderingContext2D
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      document.getElementById('layer')?.appendChild(canvas)
+      const { layer, context, index } = createLayer(
+        form.value.width, 
+        form.value.height,
+        'white',
+        document.getElementById('layer') as HTMLElement,
+      )
+
+      canvas = layer
+      ctx = context
+      idx = index
     }
 
     return {
@@ -140,7 +149,7 @@ export default defineComponent({
     position: relative;
   }
 
-  .centerCSS{
+  .center-layer{
     position: absolute;
     top: 50%;
     left: 50%;

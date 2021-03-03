@@ -1,39 +1,51 @@
+type style = {
+    fillStyle?: string
+}
+
 // 所有图层队列
-const coverageQueue = []
+const layerQueue: {
+    currentContext: CanvasRenderingContext2D
+    currentLayer: HTMLCanvasElement
+    index: number
+    children?: {
+        type: string
+        style?: style
+    }[]
+}[] = []
 
 // 当前图层
-const currentCoverage = {}
+const currentLayer = {
+
+}
 
 // 当前图层的渲染队列
-const currentCoverageQueue = []
+const currentLayerQueue = []
+
+/**
+ * 唯一标识
+ */
+let endIndex = 0
 
 let canvas: HTMLCanvasElement
 
 /**
- * 渲染图层
- */
-function renderCoverage(){
-
-}
-
-/**
  * 添加图层
  */
-function addCoverage() {
+function addLayer() {
     
 }
 
 /**
  * 图层移动
  */
-function moveCoverage(){
+function moveLayer(){
 
 }
 
 /**
  * 保存所有图层
  */
-function saveAllCoverage(){
+function saveAllLayer(){
 
 }
 
@@ -41,13 +53,103 @@ function saveAllCoverage(){
  * Ctrl + z 回撤
  */
 
-function revokeCoverage(){
+function revokeLayer(){
 
 }
 
 /**
- * 创建图层
+ * 创建场景
  */
-function createCoverage(width: number, height: number){
-    document.createElement('canvas')
+type bgType = 'white' | 'black' | 'transparent'
+
+function createLayer(
+    width: number, 
+    height: number, 
+    bgType: bgType, 
+    container: HTMLElement
+){
+    
+    const layer = document.createElement('canvas') as HTMLCanvasElement
+    const context = layer.getContext('2d') as CanvasRenderingContext2D
+    const index = endIndex
+
+    layer.width = width
+    layer.height = height
+    
+    coverInQueue(layer, context, index)
+    endIndex ++;
+
+    // 渲染背景
+    renderBG(context, width, height, bgType)
+    
+    // 加入图层队列
+    pushChildren(index, 'bg', { fillStyle: bgType })
+
+    // 添加到容器中
+    container.appendChild(layer)
+
+    layer.className = 'center-layer'
+
+    return {
+        layer,
+        context,
+        index
+    }
+}
+
+/**
+ * 添加绘制
+ */
+export function pushChildren(index: number, type: string, style: style){
+    let pushed = layerQueue[index]
+    if(pushed && pushed.children) {
+        pushed.children.push({
+            type,
+            style: Object.assign(style)
+        })
+    }
+}
+
+export {
+    createLayer
+}
+
+export function renderLayer(){
+    let 
+        children, 
+        currentLayer: HTMLCanvasElement, 
+        currentContext: CanvasRenderingContext2D
+
+    layerQueue.forEach(layer => {
+        children = layer.children
+        currentLayer = layer.currentLayer
+        currentContext = layer.currentContext
+        if(children) {
+            children.forEach(c => {
+                if(c.type === 'bg') {
+                    renderBG(currentContext, currentLayer.width, currentLayer.height, '#FFFFFF')
+                }
+            })
+        }
+    })
+
+}
+
+function coverInQueue(layer: HTMLCanvasElement, context: CanvasRenderingContext2D, index: number){
+    layerQueue.push({
+        currentContext: context,
+        currentLayer: layer,
+        index,
+        children: []
+    })
+}
+
+function renderBG(
+    context: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    fillStyle: string
+){
+    context.fillStyle = fillStyle;
+    context.fillRect(0, 0, width, height)
 }
