@@ -29,25 +29,26 @@
 
   <div id='layer'></div>
 
-  <el-dialog title="收货地址" v-model="dialogFormVisible">
+  <el-dialog title="新建文档" v-model="dialogFormVisible">
     <el-form v-model="form">
-      <el-form-item label="width">
+      <el-form-item label="宽度">
         <el-input autocomplete="off" v-model="form.width"></el-input>
       </el-form-item>
-      <el-form-item label="height">
+      <el-form-item label="高度">
         <el-input autocomplete="off" v-model="form.height"></el-input>
       </el-form-item>
-      <el-form-item label="type">
+      <el-form-item label="类型">
         <el-select v-model="form.type">
           <el-option label="白色" value="white" />
-          <el-option label="黑色" value="block" />
+          <el-option label="黑色" value="black" />
+          <el-option label="透明" value="transparent" />
         </el-select>
       </el-form-item>
     </el-form>
     <template #footer>
       <span class="dialog-footer">
         <el-button @click="dialogFormVisible = false">取 消</el-button>
-        <el-button type="primary" @click="confirmNew">确 定</el-button>
+        <el-button type="primary" @click="newDocument">确 定</el-button>
       </span>
     </template>
   </el-dialog>
@@ -56,7 +57,7 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
 import { Shape } from './handle/handle.shape'
-import { createLayer } from './handle/handle'
+import { createLayer, bgType } from './handle/handle'
 
 export default defineComponent({
   name: 'App',
@@ -70,7 +71,9 @@ export default defineComponent({
       type: 'white'
     })
 
-    let canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, idx: number
+    let canvas: HTMLCanvasElement, 
+        ctx: CanvasRenderingContext2D, 
+        idx: number
 
     const menuList = ref([
       {
@@ -89,6 +92,8 @@ export default defineComponent({
             if(canvas) {
               const utilRect = new Shape(canvas, ctx, idx)
               utilRect.init()
+              const layer = document.getElementById('layer') as HTMLElement
+              layer.style.cursor = 'crosshair'
             }
           }
         }, {
@@ -100,12 +105,13 @@ export default defineComponent({
       }
     ])
 
-    const confirmNew = () => {
+    const newDocument = () => {
       dialogFormVisible.value = false
+      const formResult = form.value
       const { layer, context, index } = createLayer(
-        form.value.width, 
-        form.value.height,
-        'white',
+        formResult.width, 
+        formResult.height,
+        formResult.type as bgType,
         document.getElementById('layer') as HTMLElement,
       )
 
@@ -118,7 +124,7 @@ export default defineComponent({
       menuList,
       dialogFormVisible,
       form,
-      confirmNew
+      newDocument
     }
   }
 })

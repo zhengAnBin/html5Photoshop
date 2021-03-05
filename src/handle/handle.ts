@@ -60,12 +60,12 @@ function revokeLayer(){
 /**
  * 创建场景
  */
-type bgType = 'white' | 'black' | 'transparent'
+export type bgType = 'white' | 'black' | 'transparent'
 
 function createLayer(
     width: number, 
     height: number, 
-    bgType: bgType, 
+    type: bgType, 
     container: HTMLElement
 ){
     
@@ -75,15 +75,16 @@ function createLayer(
 
     layer.width = width
     layer.height = height
+    layer.style.background = type
     
     coverInQueue(layer, context, index)
     endIndex ++;
 
     // 渲染背景
-    renderBG(context, width, height, bgType)
+    // renderBG(context, width, height, type)
     
     // 加入图层队列
-    pushChildren(index, 'bg', { fillStyle: bgType })
+    pushChildren(index, 'bg', { fillStyle: type })
 
     // 添加到容器中
     container.appendChild(layer)
@@ -110,9 +111,7 @@ export function pushChildren(index: number, type: string, style: style){
     }
 }
 
-export {
-    createLayer
-}
+export { createLayer }
 
 export function renderLayer(){
     let 

@@ -188,3 +188,233 @@ export class Shape {
     }
     
 }
+
+
+
+
+/**
+ * 在 Photoshop 中矩形有两种
+ * 一种是矩形选框工具
+ * 一种是矩形工具
+ * 选框工具选中后，会创建一个虚线边框的矩形，且边框是动态的，按照一定规律运动
+ * 选框工具选中后，会将前景色色板中的颜色进行填充，而且每个矩形是一个单独的图层
+ * 按ctrl + t 可以等比例放大缩小，旋转
+ * 
+ */
+
+// fullLine = 实线，  dottedLine = 虚线
+type drawRectType = 'fullLine' | 'dottedLine'
+
+/**
+ * 
+ * sx 起点x坐标
+ * sy 起点y坐标
+ * ex 终点x坐标
+ * ey 终点y坐标
+ */
+type drawCoordinate = {
+    sx: number
+    sy: number
+    ex: number
+    ey: number
+}
+
+/**
+ * 
+ * @param coordinate 坐标
+ * @param context canvas 上下文
+ * @param type 绘制类型
+ */
+export function drawRect(
+    coordinate: drawCoordinate,
+    context: CanvasRenderingContext2D,
+    type: drawRectType
+){
+    if(type === 'fullLine') {
+        drawRectFullLine(context, coordinate)
+    } else if(type === 'dottedLine') {
+        drawRectDottedLine(context, coordinate)
+    } else {
+        console.error(` is not draw type `)
+    }
+}
+
+let startX: number, startY: number, endX: number, endY: number
+
+export function initRect(canvas: HTMLCanvasElement, type: drawRectType){
+
+    
+    const context = canvas.getContext('2d') as CanvasRenderingContext2D
+    const width = canvas.width, height = canvas.height
+
+    let timer: number | null
+
+    // 鼠标移动
+    const mousemove =  (event: MouseEvent) => {
+        let { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+        if(!timer) {
+            timer = setTimeout(() => {
+                context.clearRect(0, 0, width, height)
+                drawRect({
+                    sx: startX,
+                    sy: startY,
+                    ex: x,
+                    ey: y
+                }, context, type)
+                clearTimeout(timer as number)
+                timer = null
+            }, 20)
+        }
+    }
+
+    // 鼠标按下
+    const mousedown = (event: MouseEvent) => {
+        cancelAnimationFrame(AnimationControl)
+        const { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+        canvas.addEventListener('mousemove', mousemove)
+        startX = x
+        startY = y
+    }
+    
+    // 鼠标松开
+    const mouseup = (event: MouseEvent) => {
+        let { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+        drawRectDottedLineAnimation(context)
+        canvas.removeEventListener('mousemove', mousemove)
+        endX = x
+        endY = y
+    }
+
+    const mouseenter = () => {
+        canvas.addEventListener('mousedown', mousedown)
+        canvas.addEventListener('mouseup', mouseup)
+    }
+    
+    const mouseleave = () => {
+        canvas.removeEventListener('mousedown', mousedown)
+        canvas.removeEventListener('mouseup', mouseup)
+    }
+    
+    canvas.addEventListener('mouseenter', mouseenter)
+    canvas.addEventListener('mouseleave', mouseleave)
+}
+
+/**
+ * 实线矩形工具
+ * @param context 
+ * @param coordinate 
+ */
+function drawRectFullLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
+    const { sx, sy, ex, ey } = coordinate
+    context.beginPath();
+    context.strokeRect(sx, sy, ex - sx, ey - sy);
+    // TODO: 获取前景色色板并且进行填充
+    // context.strokeStyle = ''
+    context.closePath();
+}
+
+/**
+ * 虚线选框工具
+ * @param context 
+ * @param coordinate 
+ */
+function drawRectDottedLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
+    
+    const { sx, sy, ex, ey } = coordinate
+
+    context.beginPath()
+
+    // left
+    drawRectDottedLineToVertical(sx, sy, ey, context)
+    // bottom
+    drawRectDottedLineToHorizontal(sx, ey, ex, context)
+    // right
+    drawRectDottedLineToVertical(ex, sy, ey, context)
+    // top
+    drawRectDottedLineToHorizontal(sx, sy, ex, context)
+
+    context.closePath()
+}
+
+// 动态虚线的运动初始值
+let baseSpeed = 0, speed = 0.1
+
+// 虚线的间隔
+const dottedLineBase = 4
+
+/**
+ * 垂直绘制虚线
+ * @param sx 起点 x
+ * @param sy 起点 y
+ * @param moveY 移动 y点
+ * @param context 
+ */
+function drawRectDottedLineToVertical(sx: number, sy: number, moveY: number, context: CanvasRenderingContext2D) {
+    if(sx > moveY) {
+        if(baseSpeed > dottedLineBase) {
+            context.moveTo(sx, sy);
+            context.lineTo(sx, sy - (baseSpeed - dottedLineBase));
+            context.stroke();
+        }
+    } else {
+        if(baseSpeed > dottedLineBase) {
+            context.moveTo(sx, sy);
+            context.lineTo(sx, sy + (baseSpeed - dottedLineBase));
+            context.stroke();
+        }
+    }
+    
+    context.setLineDash([dottedLineBase, dottedLineBase]);
+    context.moveTo(sx, sy > moveY ? sy - baseSpeed : sy + baseSpeed);
+    context.lineTo(sx, moveY);
+    context.stroke();
+}
+
+/**
+ * 
+ * @param sx 起点 x
+ * @param sy 起点 y
+ * @param moveX 移动 y点
+ * @param context 
+ */
+function drawRectDottedLineToHorizontal(sx: number, sy: number, moveX: number, context: CanvasRenderingContext2D) {
+    if(sx < moveX) {
+        if(baseSpeed > dottedLineBase) {
+            context.moveTo(sx, sy);
+            context.lineTo(sx + (baseSpeed - dottedLineBase), sy);
+            context.stroke();
+        }
+    } else {
+        if(baseSpeed > dottedLineBase) {
+            context.moveTo(sx, sy);
+            context.lineTo(sx - (baseSpeed - dottedLineBase), sy);
+            context.stroke();
+        }
+    }   
+    
+    context.setLineDash([dottedLineBase, dottedLineBase]);
+    context.moveTo(sx < moveX ? sx + baseSpeed : sx - baseSpeed, sy);
+    context.lineTo(moveX, sy);
+    context.stroke();
+}
+
+const resetSpeed = dottedLineBase * 2
+
+let AnimationControl: number
+
+/**
+ * 运动的虚线的边框
+ */
+function drawRectDottedLineAnimation(context: CanvasRenderingContext2D){
+    if(baseSpeed >= resetSpeed) {
+        baseSpeed = 0
+    }
+
+    // context.clearRect(0, 0, )
+    // drawRectDottedLine(context, {
+
+    // })
+
+    baseSpeed = Number((baseSpeed + speed).toFixed(2))
+    AnimationControl = requestAnimationFrame(() => drawRectDottedLineAnimation(context))
+}
