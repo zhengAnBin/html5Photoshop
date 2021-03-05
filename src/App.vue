@@ -94,7 +94,7 @@ export default defineComponent({
         }, {
           name: '圆形',
           onClick: () => {
-            
+            console.log('圆形工具')
           }
         }]
       }
@@ -148,7 +148,6 @@ export default defineComponent({
     height: calc(100vh - 30px);
     position: relative;
   }
-
   .center-layer{
     position: absolute;
     top: 50%;

@@ -3,6 +3,7 @@
  */
 import { getPointOnCanvas } from './handle.common'
 import { renderLayer, pushChildren } from './handle'
+
 let d = 0
 export class Shape {
 
@@ -60,10 +61,10 @@ export class Shape {
         this.brokenLineForHorizontal(startX, startY, x)
 
         this.context.closePath()
-
+        
         this.endX = x
         this.endY = y
-        // console.log(2)
+
     }
 
     /**
@@ -73,49 +74,25 @@ export class Shape {
      * @param moveY 绘制至
      */
     brokenLineForVertical(startX: number, startY: number, moveY: number){
-        startY = startY + d
-
-        let point , moveToY
-
-        if(startY > moveY) {  // - int 起点大于终点
-            point = startY
-            // 结束条件为起点小于终点时，结束循环
-            while(point - moveY > 0) {
-                moveToY = point - 4
-                this.context.moveTo(startX, moveToY < moveY ? moveY : moveToY)
-                this.context.lineTo(startX, point)
-                this.context.stroke();
-
-                // 起点不断减小
-                point = point - 8
+        const context = this.context;
+        if(startY > moveY) {
+            if(d > 4) {
+                context.moveTo(startX, startY);
+                context.lineTo(startX, startY - (d - 4));
+                context.stroke();
             }
-        } else {  // + int  起点小于终点
-            point = startY
-            // 结束条件为起点大于终点
-            while(point - moveY < 0) {
-                moveToY = point + 4
-                this.context.moveTo(startX, point)
-                this.context.lineTo(startX, moveToY > moveY ? moveY : moveToY)
-                this.context.stroke();
-
-                // 起点不断减小
-                point = point + 8
+        } else {
+            if(d > 4) {
+                context.moveTo(startX, startY);
+                context.lineTo(startX, startY + (d - 4));
+                context.stroke();
             }
         }
-
         
-        
-        // let test = startY
-        // let lineTo
-        // for (let index = 0; index < y; index ++) {
-        //     lineTo = startY + 4 * Math.sign(y)
-        //     if(startY < Math.abs(y)) {
-        //         this.context.moveTo(startX, startY)
-        //         this.context.lineTo(startX, lineTo > y ? startY * Math.sign(y) : lineTo)
-        //         this.context.stroke();
-        //         startY += 8
-        //     }
-        // }
+        context.setLineDash([4, 4]);
+        context.moveTo(startX, startY > moveY ? startY - d : startY + d);
+        context.lineTo(startX, moveY);
+        context.stroke();
     }
 
     /**
@@ -126,47 +103,29 @@ export class Shape {
      * @param moveX 绘制至
      */
     brokenLineForHorizontal(startX: number, startY: number, moveX: number){
-        startX = startX + d
-        let point, moveToX
-
-        if(startX > moveX) { // 起点大于终点 就是往左走
-            point = startX
-
-            while(point - moveX > 0) {
-                moveToX = point - 4
-                this.context.moveTo(point, startY)
-                this.context.lineTo(moveToX > moveX ? moveToX : moveX, startY)
-                this.context.stroke();
-                point = point - 8
+        const context = this.context;
+        if(startX < moveX) {
+            if(d > 4) {
+                context.moveTo(startX, startY);
+                context.lineTo(startX + (d - 4), startY);
+                context.stroke();
             }
-
         } else {
-            point = startX
-
-            while(point - moveX < 0) {
-                moveToX = point + 4
-                this.context.moveTo(moveToX < moveX ? moveToX : moveX, startY)
-                this.context.lineTo(point, startY)
-                this.context.stroke();
-                // 起点不断减小
-                point = point + 8
-
+            if(d > 4) {
+                context.moveTo(startX, startY);
+                context.lineTo(startX - (d - 4), startY);
+                context.stroke();
             }
-        }
-        // let lineTo
-        // for (let index = 0; index < x; index ++) {
-        //     lineTo = startX + 4 * Math.sign(x)
-        //     if(startX < Math.abs(x)) {
-        //         this.context.moveTo(startX, startY)
-        //         this.context.lineTo(lineTo < x ? lineTo : startX * Math.sign(x), startY)
-        //         this.context.stroke();
-        //         startX += 8
-        //     }
-        // }
+        }   
+        
+        context.setLineDash([4, 4]);  // [实线长度, 间隙长度]
+        context.moveTo(startX < moveX ? startX + d : startX - d, startY);
+        context.lineTo(moveX, startY);
+        context.stroke();
     }
 
     animation(){
-        if(d >= 6) {
+        if(d >= 8) {
             d = 0
         }
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
@@ -177,7 +136,7 @@ export class Shape {
             this.endX as number, 
             this.endY as number
         )
-        d = d + 0.1
+        d = Number((d + 0.1).toFixed(2))
         this.req = requestAnimationFrame(this.animation.bind(this))
     }
 
@@ -208,6 +167,7 @@ export class Shape {
         
         const mouseup = () => {
             this.animation()
+            
             canvas.removeEventListener('mousemove', mousemove)
             // pushChildren()
         }
