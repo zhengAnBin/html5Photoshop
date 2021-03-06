@@ -1,196 +1,10 @@
 /**
  * 矩形工具
  */
-import { getPointOnCanvas } from './handle.common'
-import { renderLayer, pushChildren } from './handle'
-
-let d = 0
-export class Shape {
-
-    canvas: HTMLCanvasElement
-    context: CanvasRenderingContext2D
-    queue: {
-        startX: number
-        startY: number
-        endX: number
-        endY: number
-    }[]
-    
-    startX?: number
-    startY?: number
-    endX?: number
-    endY?: number
-
-    is: boolean
-    req: any
-
-    constructor(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D, index: number){
-        this.canvas = canvas
-        this.context = context
-        this.context.strokeStyle = 'red';
-        this.queue = []
-
-        this.is = false
-    }
-
-    reset(){
-        this.queue.forEach(rect => this.brokenLineDraw(rect.startX, rect.startY, rect.endX, rect.endY))
-    }
-
-    draw1(startX: number, startY: number, x: number, y: number) {
-        this.context.beginPath()
-        this.context.strokeRect(startX, startY, x - startX, y - startY)
-        this.context.closePath()
-        this.endX = x
-        this.endY = y
-    }
-
-    /**
-     * 虚线绘制
-     */
-    brokenLineDraw(startX: number, startY: number, x: number, y: number) {
-        this.context.beginPath()
-
-        // left
-        this.brokenLineForVertical(startX, startY, y)
-        // bottom
-        this.brokenLineForHorizontal(startX, y, x)
-        // right
-        this.brokenLineForVertical(x, startY, y)
-        // top
-        this.brokenLineForHorizontal(startX, startY, x)
-
-        this.context.closePath()
-        
-        this.endX = x
-        this.endY = y
-
-    }
-
-    /**
-     * 垂直绘制虚线
-     * @param startX 鼠标起点x
-     * @param startY 鼠标起点y
-     * @param moveY 绘制至
-     */
-    brokenLineForVertical(startX: number, startY: number, moveY: number){
-        const context = this.context;
-        if(startY > moveY) {
-            if(d > 4) {
-                context.moveTo(startX, startY);
-                context.lineTo(startX, startY - (d - 4));
-                context.stroke();
-            }
-        } else {
-            if(d > 4) {
-                context.moveTo(startX, startY);
-                context.lineTo(startX, startY + (d - 4));
-                context.stroke();
-            }
-        }
-        
-        context.setLineDash([4, 4]);
-        context.moveTo(startX, startY > moveY ? startY - d : startY + d);
-        context.lineTo(startX, moveY);
-        context.stroke();
-    }
-
-    /**
-     * 
-     * 水平绘制虚线
-     * @param startX 鼠标起点x
-     * @param startY 鼠标起点y
-     * @param moveX 绘制至
-     */
-    brokenLineForHorizontal(startX: number, startY: number, moveX: number){
-        const context = this.context;
-        if(startX < moveX) {
-            if(d > 4) {
-                context.moveTo(startX, startY);
-                context.lineTo(startX + (d - 4), startY);
-                context.stroke();
-            }
-        } else {
-            if(d > 4) {
-                context.moveTo(startX, startY);
-                context.lineTo(startX - (d - 4), startY);
-                context.stroke();
-            }
-        }   
-        
-        context.setLineDash([4, 4]);  // [实线长度, 间隙长度]
-        context.moveTo(startX < moveX ? startX + d : startX - d, startY);
-        context.lineTo(moveX, startY);
-        context.stroke();
-    }
-
-    animation(){
-        if(d >= 8) {
-            d = 0
-        }
-        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-        renderLayer()
-        this.brokenLineDraw(
-            this.startX as number, 
-            this.startY as number, 
-            this.endX as number, 
-            this.endY as number
-        )
-        d = Number((d + 0.1).toFixed(2))
-        this.req = requestAnimationFrame(this.animation.bind(this))
-    }
-
-    init(){
-        const canvas = this.canvas
-        const context = this.context
-        let timer: number | null
-        const mousemove =  (event: MouseEvent) => {
-         
-            let { x, y } = getPointOnCanvas(this.canvas, event.pageX, event.pageY)
-            context.clearRect(0, 0, this.canvas.width, this.canvas.height)
-            this.reset()
-            renderLayer()
-            this.brokenLineDraw(this.startX as number, this.startY as number, x, y)
-            clearTimeout(timer as number)
-            timer = null
-        }
-
-        const mousedown = (event: MouseEvent) => {
-            if(this.req) cancelAnimationFrame(this.req)
-            
-            const { x, y } = getPointOnCanvas(this.canvas, event.pageX, event.pageY)
-            this.startX = x
-            this.startY = y
-            canvas.addEventListener('mousemove', mousemove)
-            
-        }
-        
-        const mouseup = () => {
-            this.animation()
-            
-            canvas.removeEventListener('mousemove', mousemove)
-            // pushChildren()
-        }
-
-        const mouseenter = () => {
-            canvas.addEventListener('mousedown', mousedown)
-            canvas.addEventListener('mouseup', mouseup)
-        }
-        
-        const mouseleave = () => {
-            canvas.removeEventListener('mousedown', mousedown)
-            canvas.removeEventListener('mouseup', mouseup)
-        }
-        
-        canvas.addEventListener('mouseenter', mouseenter)
-        canvas.addEventListener('mouseleave', mouseleave)
-
-    }
-    
-}
-
-
-
+import { getPointOnCanvas, cloneDeep } from './handle.common'
+import { getPalette } from './handle.palette'
+import { pushStatus, reRender } from './handle'
+import { currentLayer } from './handle'
 
 /**
  * 在 Photoshop 中矩形有两种
@@ -202,8 +16,11 @@ export class Shape {
  * 
  */
 
-// fullLine = 实线，  dottedLine = 虚线
-type drawRectType = 'fullLine' | 'dottedLine'
+/**
+ * fullLine = 实线
+ * dottedLine = 虚线
+ */
+type shapeType = 'fullLine' | 'dottedLine'
 
 /**
  * 
@@ -212,7 +29,7 @@ type drawRectType = 'fullLine' | 'dottedLine'
  * ex 终点x坐标
  * ey 终点y坐标
  */
-type drawCoordinate = {
+export type drawCoordinate = {
     sx: number
     sy: number
     ex: number
@@ -228,8 +45,9 @@ type drawCoordinate = {
 export function drawRect(
     coordinate: drawCoordinate,
     context: CanvasRenderingContext2D,
-    type: drawRectType
+    type: shapeType
 ){
+    reRender()
     if(type === 'fullLine') {
         drawRectFullLine(context, coordinate)
     } else if(type === 'dottedLine') {
@@ -239,13 +57,22 @@ export function drawRect(
     }
 }
 
-let startX: number, startY: number, endX: number, endY: number
+let 
+    layerIndex: number,
+    startX: number, 
+    startY: number, 
+    endX: number, 
+    endY: number,
+    width: number,
+    height: number
 
-export function initRect(canvas: HTMLCanvasElement, type: drawRectType){
+export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeType) {
 
-    
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
-    const width = canvas.width, height = canvas.height
+
+    width = canvas.width
+    height = canvas.height
+    layerIndex = index
 
     let timer: number | null
 
@@ -278,11 +105,12 @@ export function initRect(canvas: HTMLCanvasElement, type: drawRectType){
     
     // 鼠标松开
     const mouseup = (event: MouseEvent) => {
-        let { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+        const { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+
+        // TODO: 开启虚线动画
         drawRectDottedLineAnimation(context)
         canvas.removeEventListener('mousemove', mousemove)
-        endX = x
-        endY = y
+        
     }
 
     const mouseenter = () => {
@@ -297,6 +125,68 @@ export function initRect(canvas: HTMLCanvasElement, type: drawRectType){
     
     canvas.addEventListener('mouseenter', mouseenter)
     canvas.addEventListener('mouseleave', mouseleave)
+
+    document.addEventListener('keydown', (event) => {
+
+        const nKeyCode = event.keyCode || event.which || event.charCode
+
+        const isCtrl = event.ctrlKey || event.metaKey;
+        const isAlt = event.altKey
+
+        if(nKeyCode === 46 && isCtrl) {
+            // Ctrl + delete 填充背景色
+            let background = getPalette('background') as string
+            context.fillStyle = background
+            context.fillRect(
+                startX, 
+                startY, 
+                (endX - startX), 
+                (endY - startY)
+            )
+            // TODO: 将状态保存在绘制队列中
+            pushStatus(layerIndex, {
+                type: 'rect',
+                position: {
+                    sx: startX,
+                    sy: startY,
+                    ex: endX,
+                    ey: endY
+                },
+                positionFill: background,
+            })
+        }
+
+        if(nKeyCode === 46 && isAlt) {
+            // Alt + delete 填充前景色
+            let foreground = getPalette('foreground') as string
+            context.fillStyle = foreground
+            context.fillRect(
+                startX, 
+                startY, 
+                (endX - startX), 
+                (endY - startY)
+            )
+            pushStatus(layerIndex, {
+                type: 'rect',
+                position: {
+                    sx: startX,
+                    sy: startY,
+                    ex: endX,
+                    ey: endY
+                },
+                positionFill: foreground,
+            })
+        }
+    })
+}
+
+export function fillRect(context: CanvasRenderingContext2D, coordinate: drawCoordinate, color: string) {
+    const { sx, sy, ex, ey } = coordinate
+    context.beginPath()
+    context.fillStyle = color
+    context.fillRect(sx, sy, (ex - sx), (ey - sy))
+    // context.fill()
+    context.closePath()
 }
 
 /**
@@ -309,7 +199,8 @@ function drawRectFullLine(context: CanvasRenderingContext2D, coordinate: drawCoo
     context.beginPath();
     context.strokeRect(sx, sy, ex - sx, ey - sy);
     // TODO: 获取前景色色板并且进行填充
-    // context.strokeStyle = ''
+    context.strokeStyle = getPalette('background') as string
+    context.fill()
     context.closePath();
 }
 
@@ -328,10 +219,14 @@ function drawRectDottedLine(context: CanvasRenderingContext2D, coordinate: drawC
     drawRectDottedLineToVertical(sx, sy, ey, context)
     // bottom
     drawRectDottedLineToHorizontal(sx, ey, ex, context)
+
     // right
     drawRectDottedLineToVertical(ex, sy, ey, context)
     // top
     drawRectDottedLineToHorizontal(sx, sy, ex, context)
+
+    endX = ex
+    endY = ey
 
     context.closePath()
 }
@@ -350,7 +245,7 @@ const dottedLineBase = 4
  * @param context 
  */
 function drawRectDottedLineToVertical(sx: number, sy: number, moveY: number, context: CanvasRenderingContext2D) {
-    if(sx > moveY) {
+    if(sy > moveY) {
         if(baseSpeed > dottedLineBase) {
             context.moveTo(sx, sy);
             context.lineTo(sx, sy - (baseSpeed - dottedLineBase));
@@ -363,15 +258,15 @@ function drawRectDottedLineToVertical(sx: number, sy: number, moveY: number, con
             context.stroke();
         }
     }
-    
-    context.setLineDash([dottedLineBase, dottedLineBase]);
+
+    context.setLineDash([ dottedLineBase, dottedLineBase ]);
     context.moveTo(sx, sy > moveY ? sy - baseSpeed : sy + baseSpeed);
     context.lineTo(sx, moveY);
     context.stroke();
 }
 
 /**
- * 
+ * 水平
  * @param sx 起点 x
  * @param sy 起点 y
  * @param moveX 移动 y点
@@ -410,11 +305,28 @@ function drawRectDottedLineAnimation(context: CanvasRenderingContext2D){
         baseSpeed = 0
     }
 
-    // context.clearRect(0, 0, )
-    // drawRectDottedLine(context, {
-
-    // })
-
+    context.clearRect(0, 0, width, height)
+    drawRect({
+        sx: startX,
+        sy: startY,
+        ex: endX,
+        ey: endY
+    }, context, 'dottedLine')
     baseSpeed = Number((baseSpeed + speed).toFixed(2))
     AnimationControl = requestAnimationFrame(() => drawRectDottedLineAnimation(context))
+}
+
+/**
+ * 绘制圆形
+ */
+
+function drawEllipse(context: CanvasRenderingContext2D, type: shapeType){
+    
+}
+
+/**
+ * 初始圆形
+ */
+function initEllipse(canvas: HTMLCanvasElement){
+
 }

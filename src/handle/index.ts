@@ -1,6 +1,11 @@
+import { initRect } from './handle.shape'
+import { setPalette, getPalette } from './handle.palette'
+import { createLayer } from './handle'
 
 
-
-export { 
-    Shape 
-} from './handle.shape'
+export {
+    initRect,
+    setPalette,
+    getPalette,
+    createLayer
+}

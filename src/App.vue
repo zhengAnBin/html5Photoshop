@@ -1,18 +1,18 @@
 <template>
+  <!-- nav -->
   <el-row>
     <el-col 
       v-for="item in menuList" 
       v-bind:key="item.name"
       :span="1"
       class="menuItem"
-
     >
       <span v-if="!item.children" class="el-dropdown" @click="item.onClick">
-          {{ item.name }}<i :class="{[`${item.icon}`]: item.icon}" class="el-icon--right"></i>
-        </span>
+        <i :class="{[`${item.icon}`]: item.icon}" class="el-icon--right"></i>
+      </span>
       <el-dropdown trigger='click' v-else>
         <span>
-          {{ item.name }}<i :class="{[`${item.icon}`]: item.icon}" class="el-icon--right"></i>
+          <i :class="{[`${item.icon}`]: item.icon}" class="el-icon--right"></i>
         </span>
         <template #dropdown v-if="item.children">
           <el-dropdown-menu>
@@ -25,10 +25,34 @@
         </template>
       </el-dropdown>
     </el-col>
+    <el-col class="menuItem" span="1">
+      <div class="el-dropdown">
+        <div class="center-box">
+          前景色：
+          <el-color-picker  
+            v-model="color.backgroundColor" 
+            size="mini"
+          />
+        </div>
+      </div>
+    </el-col>
+    <el-col class="menuItem" span="1">
+      <div class="el-dropdown">
+        <div class="center-box">
+          背景色：
+          <el-color-picker 
+            v-model="color.foregroundColor" 
+            size="mini"
+          />
+        </div>
+      </div>
+    </el-col>
   </el-row>
 
+  <!-- document -->
   <div id='layer'></div>
 
+  <!-- model -->
   <el-dialog title="新建文档" v-model="dialogFormVisible">
     <el-form v-model="form">
       <el-form-item label="宽度">
@@ -55,9 +79,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
-import { Shape } from './handle/handle.shape'
-import { createLayer, bgType } from './handle/handle'
+
+import { defineComponent, ref, reactive, watch } from 'vue'
+import { initRect, setPalette, getPalette, createLayer } from './handle'
 
 export default defineComponent({
   name: 'App',
@@ -71,9 +95,18 @@ export default defineComponent({
       type: 'white'
     })
 
-    let canvas: HTMLCanvasElement, 
-        ctx: CanvasRenderingContext2D, 
-        idx: number
+    const [ backgroundColor, foregroundColor ] = getPalette()
+    const color = reactive({
+      backgroundColor,
+      foregroundColor
+    })
+
+    watch(color, (current) => {
+      setPalette('background', current.backgroundColor)
+      setPalette('foreground', current.foregroundColor)
+    })
+
+    let canvas: HTMLCanvasElement, layerIndex: number
 
     const menuList = ref([
       {
@@ -84,14 +117,15 @@ export default defineComponent({
         }
       },
       {
-        name: '图形',
-        icon: 'el-icon-arrow-down',
+        name: '选框工具',
+        icon: 'el-icon-full-screen',
         children: [{
           name: '矩形',
           onClick: () => {
             if(canvas) {
-              const utilRect = new Shape(canvas, ctx, idx)
-              utilRect.init()
+              initRect(canvas, layerIndex ,"dottedLine")
+
+              // 设置鼠标样式
               const layer = document.getElementById('layer') as HTMLElement
               layer.style.cursor = 'crosshair'
             }
@@ -105,31 +139,33 @@ export default defineComponent({
       }
     ])
 
+    // 创建文档
     const newDocument = () => {
-      dialogFormVisible.value = false
       const formResult = form.value
-      const { layer, context, index } = createLayer(
+
+      const { layer, layerIndex: index } = createLayer(
         formResult.width, 
         formResult.height,
-        formResult.type as bgType,
+        formResult.type as any,
         document.getElementById('layer') as HTMLElement,
       )
 
       canvas = layer
-      ctx = context
-      idx = index
+      layerIndex = index
+      dialogFormVisible.value = false
     }
 
     return {
       menuList,
       dialogFormVisible,
       form,
-      newDocument
+      newDocument,
+      color
     }
   }
 })
 </script>
-
+ 
 <style>
   *{
     margin: 0;
@@ -145,6 +181,7 @@ export default defineComponent({
     align-items: center;
     height: 30px;
     cursor: pointer;
+    padding-left: 5px;
   }
   body {
     background: #1D1E22;
@@ -159,5 +196,10 @@ export default defineComponent({
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+  }
+  .center-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

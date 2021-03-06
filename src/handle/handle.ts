@@ -1,40 +1,5 @@
-type style = {
-    fillStyle?: string
-}
-
-// 所有图层队列
-const layerQueue: {
-    currentContext: CanvasRenderingContext2D
-    currentLayer: HTMLCanvasElement
-    index: number
-    children?: {
-        type: string
-        style?: style
-    }[]
-}[] = []
-
-// 当前图层
-const currentLayer = {
-
-}
-
-// 当前图层的渲染队列
-const currentLayerQueue = []
-
-/**
- * 唯一标识
- */
-let endIndex = 0
-
-let canvas: HTMLCanvasElement
-
-/**
- * 添加图层
- */
-function addLayer() {
-    
-}
-
+import { cloneDeep } from './handle.common'
+import { fillRect } from './handle.shape'
 /**
  * 图层移动
  */
@@ -62,93 +27,109 @@ function revokeLayer(){
  */
 export type bgType = 'white' | 'black' | 'transparent'
 
-function createLayer(
+let documents = []
+
+export interface currentLayer {
+    zindex: number
+    layers?: {
+        zindex: number
+        canvas: HTMLCanvasElement
+        status: {
+            type: 'rect',
+            position: any,
+            positionFill: string
+        }[]
+    }[]
+}
+
+let currentLayer: currentLayer | undefined
+
+/**
+ * 重载当前图层
+ */
+export function reRender(){
+    currentLayer?.layers?.forEach(l => {
+        if(l.status.length === 0) { return }
+        let context = l.canvas.getContext('2d') as CanvasRenderingContext2D
+        l.status.forEach(s => {
+            if(s.type === 'rect') {
+                fillRect(context, s.position, s.positionFill)
+            }
+        })
+    })
+}
+
+/**
+ * 创建图层
+ * @param width 
+ * @param height 
+ * @param type 
+ * @param container 
+ */
+export function createLayer(
     width: number, 
     height: number, 
     type: bgType, 
     container: HTMLElement
 ){
     
+    // 创建一个canvas html元素
     const layer = document.createElement('canvas') as HTMLCanvasElement
-    const context = layer.getContext('2d') as CanvasRenderingContext2D
-    const index = endIndex
 
+    const zindex = documents.length === 0 ? 0 : documents.length - 1
+
+    // 设置宽高
     layer.width = width
     layer.height = height
+
+    // 设置背景色
     layer.style.background = type
-    
-    coverInQueue(layer, context, index)
-    endIndex ++;
 
-    // 渲染背景
-    // renderBG(context, width, height, type)
-    
-    // 加入图层队列
-    pushChildren(index, 'bg', { fillStyle: type })
+    // 保存为当前图层
+    let currentLayerInfo = {
+        zindex: zindex,
+        layers: [{
+            zindex: 0,
+            canvas: layer,
+            status: []
+        }]
+    }
 
-    // 添加到容器中
+    // TODO: cloneDeep
+    currentLayer = currentLayerInfo
+
+    // 添加到全局窗口中
+    documents.push(currentLayerInfo)
+
+    // 添加到画布中
     container.appendChild(layer)
 
+    // 并且设置居中显示
     layer.className = 'center-layer'
 
     return {
         layer,
-        context,
-        index
+        layerIndex: 0
     }
 }
 
 /**
- * 添加绘制
+ * 添加的图层都是透明的
  */
-export function pushChildren(index: number, type: string, style: style){
-    let pushed = layerQueue[index]
-    if(pushed && pushed.children) {
-        pushed.children.push({
-            type,
-            style: Object.assign(style)
-        })
+export function addLayer() {
+
+}
+
+/**
+ * 将状态保存在当前文档中的某一个图层
+ */
+export function pushStatus(zindex: number, style: any){
+    if(currentLayer && currentLayer.layers) {
+        currentLayer.layers[zindex].status.push(style)
+        // if(currentLayer.layers.length <= zindex && zindex >= 0) {
+        //     console.log('yes')
+        //     console.log(currentLayer.layers[zindex])
+        //     currentLayer.layers[zindex].status.push(style)
+        // }
     }
-}
-
-export { createLayer }
-
-export function renderLayer(){
-    let 
-        children, 
-        currentLayer: HTMLCanvasElement, 
-        currentContext: CanvasRenderingContext2D
-
-    layerQueue.forEach(layer => {
-        children = layer.children
-        currentLayer = layer.currentLayer
-        currentContext = layer.currentContext
-        if(children) {
-            children.forEach(c => {
-                if(c.type === 'bg') {
-                    renderBG(currentContext, currentLayer.width, currentLayer.height, '#FFFFFF')
-                }
-            })
-        }
-    })
-
-}
-
-function coverInQueue(layer: HTMLCanvasElement, context: CanvasRenderingContext2D, index: number){
-    layerQueue.push({
-        currentContext: context,
-        currentLayer: layer,
-        index,
-        children: []
-    })
-}
-
-function renderBG(
-    context: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    fillStyle: string
-){
-    context.fillStyle = fillStyle;
-    context.fillRect(0, 0, width, height)
 }
