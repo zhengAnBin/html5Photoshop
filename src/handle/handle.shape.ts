@@ -10,20 +10,24 @@ import { currentLayer } from './handle'
  * 在 Photoshop 中矩形有两种
  * 一种是矩形选框工具
  * 一种是矩形工具
- * 选框工具选中后，会创建一个虚线边框的矩形，且边框是动态的，按照一定规律运动
- * 选框工具选中后，会将前景色色板中的颜色进行填充，而且每个矩形是一个单独的图层
- * 按ctrl + t 可以等比例放大缩小，旋转
- * 
  */
 
 /**
  * fullLine = 实线
  * dottedLine = 虚线
  */
-type shapeType = 'fullLine' | 'dottedLine'
+type shapeAllType = 
+    'rect fullLine' | 
+    'rect dottedLine' |
+    'ellipse fullLine' | 
+    'ellipse dottedLine' | 
+    'rect fillet fullLine' |
+    'polygon fullLine' |
+    'line fullLine'
+
+type lineType = 'fullLine' | 'dottedLine'
 
 /**
- * 
  * sx 起点x坐标
  * sy 起点y坐标
  * ex 终点x坐标
@@ -45,7 +49,7 @@ export type drawCoordinate = {
 export function drawRect(
     coordinate: drawCoordinate,
     context: CanvasRenderingContext2D,
-    type: shapeType
+    type: lineType
 ){
     reRender()
     if(type === 'fullLine') {
@@ -66,7 +70,14 @@ let
     width: number,
     height: number
 
-export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeType) {
+
+let shapeType: shapeAllType
+
+export function setShapeType(type: shapeAllType) {
+    shapeType = type
+}
+
+export function initShape(canvas: HTMLCanvasElement, index: number) {
 
     const context = canvas.getContext('2d') as CanvasRenderingContext2D
 
@@ -78,20 +89,24 @@ export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeTy
 
     // 鼠标移动
     const mousemove =  (event: MouseEvent) => {
+        if(!shapeType) { return ; }
+
         let { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
+
         if(!timer) {
             timer = setTimeout(() => {
                 context.clearRect(0, 0, width, height)
-                drawRect({
+                move({
                     sx: startX,
                     sy: startY,
                     ex: x,
                     ey: y
-                }, context, type)
+                }, context, shapeType)
                 clearTimeout(timer as number)
                 timer = null
             }, 20)
         }
+        
     }
 
     // 鼠标按下
@@ -104,13 +119,15 @@ export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeTy
     }
     
     // 鼠标松开
-    const mouseup = (event: MouseEvent) => {
-        const { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
-
-        // TODO: 开启虚线动画
-        drawRectDottedLineAnimation(context)
-        canvas.removeEventListener('mousemove', mousemove)
+    const mouseup = () => {
+        if(shapeType === 'rect dottedLine') {
+            // 动态虚线矩形
+            drawRectDottedLineAnimation(context)
+        } else if(shapeType === 'ellipse dottedLine') {
+            // 动态虚线椭圆形
+        }
         
+        canvas.removeEventListener('mousemove', mousemove)
     }
 
     const mouseenter = () => {
@@ -127,6 +144,8 @@ export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeTy
     canvas.addEventListener('mouseleave', mouseleave)
 
     document.addEventListener('keydown', (event) => {
+
+        if(!shapeType) { return; }
 
         const nKeyCode = event.keyCode || event.which || event.charCode
 
@@ -180,12 +199,48 @@ export function initRect(canvas: HTMLCanvasElement, index: number, type: shapeTy
     })
 }
 
+function move(
+    coordinate: drawCoordinate,
+    context: CanvasRenderingContext2D,
+    type: shapeAllType
+){
+
+    switch(type) {
+        case 'rect fullLine': 
+            // 实线矩形
+            drawRect(coordinate, context, 'fullLine')
+            break;
+        case 'rect dottedLine':
+            drawRect(coordinate, context, 'dottedLine')
+            // 虚线矩形
+            break;
+        case 'rect fillet fullLine' :
+            // 实线圆角矩形
+            break;
+        case 'polygon fullLine':
+            // 实线多边形
+            break;
+        case 'line fullLine':
+            // 直线
+            break;
+        case 'ellipse fullLine':
+            // 实线椭圆形
+            drawEllipse(coordinate, context, 'fullLine')
+            break;
+        case 'ellipse dottedLine':
+            drawEllipse(coordinate, context, 'dottedLine')
+            // 虚线椭圆形
+            break;
+        default:
+            return console.error(`is not type class`)
+    }
+}
+
 export function fillRect(context: CanvasRenderingContext2D, coordinate: drawCoordinate, color: string) {
     const { sx, sy, ex, ey } = coordinate
     context.beginPath()
     context.fillStyle = color
     context.fillRect(sx, sy, (ex - sx), (ey - sy))
-    // context.fill()
     context.closePath()
 }
 
@@ -316,17 +371,82 @@ function drawRectDottedLineAnimation(context: CanvasRenderingContext2D){
     AnimationControl = requestAnimationFrame(() => drawRectDottedLineAnimation(context))
 }
 
+
+// --------------------- 绘制圆形 ---------------------------
+
+let ellipseSpeed = 0; 
+
 /**
  * 绘制圆形
  */
-
-function drawEllipse(context: CanvasRenderingContext2D, type: shapeType){
-    
+function drawEllipse(coordinate: drawCoordinate, context: CanvasRenderingContext2D, type: lineType){
+    if(type === 'fullLine') {
+        drawEllipseFullLine(context, coordinate)
+    } else if(type === 'dottedLine') {
+        drawEllipseDottedLine(context, coordinate)
+    } else {
+        console.error(` is not draw type `)
+    }
 }
 
 /**
- * 初始圆形
+ * 绘制虚线椭圆
+ * @param context 
+ * @param coordinate 
  */
-function initEllipse(canvas: HTMLCanvasElement){
+function drawEllipseDottedLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
 
+    const { x, y, radiusX, radiusY } = ellipseCircle(coordinate)
+
+    if(!context.ellipse) {
+        return console.error('请将浏览器版本更新到最高。或下载最新的chomre浏览器')
+    }
+
+    context.setLineDash([4])
+
+    if(ellipseSpeed > 0.4) {
+        context.beginPath()
+        context.ellipse(x, y, radiusX, radiusY, 0, 0 + (ellipseSpeed - 0.4), ellipseSpeed)
+        context.stroke();
+    }
+
+    context.beginPath()
+    context.ellipse(x, y, radiusX, radiusY, 0, 0 + ellipseSpeed, Math.PI)
+    context.stroke();
+    
+    if(ellipseSpeed > 0.4) {
+        context.beginPath()
+        context.ellipse(x, y, radiusX, radiusY, 0, Math.PI, Math.PI + ellipseSpeed)
+        context.stroke();
+    }
+
+    context.beginPath()
+    context.ellipse(x, y, radiusX, radiusY, 0, Math.PI + ellipseSpeed, 2 * Math.PI)
+    context.stroke();
+
+}
+
+/**
+ * 绘制实线椭圆
+ * @param context 
+ * @param coordinate 
+ */
+function drawEllipseFullLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
+
+}
+
+/**
+ * 求椭圆圆心， 以及长半径和短半径的距离
+ */
+function ellipseCircle(coordinate: drawCoordinate){
+    const { sx, sy, ex, ey } = coordinate
+    console.log(sx, sy)
+    let width = (ex - sx) / 2,
+        longth = (ey - sy) / 2
+    return { 
+        x: width + sx, 
+        y: longth + sy,
+        radiusX: Math.abs(width),
+        radiusY: Math.abs(longth)
+    }
 }

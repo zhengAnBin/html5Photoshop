@@ -81,7 +81,7 @@
 <script lang="ts">
 
 import { defineComponent, ref, reactive, watch } from 'vue'
-import { initRect, setPalette, getPalette, createLayer } from './handle'
+import { initShape, setPalette, getPalette, createLayer, setShapeType } from './handle'
 
 export default defineComponent({
   name: 'App',
@@ -122,18 +122,20 @@ export default defineComponent({
         children: [{
           name: '矩形',
           onClick: () => {
-            if(canvas) {
-              initRect(canvas, layerIndex ,"dottedLine")
+            if(!canvas) { return ; }
+            setShapeType('rect dottedLine')
 
-              // 设置鼠标样式
-              const layer = document.getElementById('layer') as HTMLElement
-              layer.style.cursor = 'crosshair'
-            }
+            const layer = document.getElementById('layer') as HTMLElement
+            layer.style.cursor = 'crosshair'
           }
         }, {
           name: '圆形',
           onClick: () => {
-            console.log('圆形工具')
+            if(!canvas) { return ; }
+            setShapeType('ellipse dottedLine')
+
+            const layer = document.getElementById('layer') as HTMLElement
+            layer.style.cursor = 'crosshair'
           }
         }]
       }
@@ -153,6 +155,9 @@ export default defineComponent({
       canvas = layer
       layerIndex = index
       dialogFormVisible.value = false
+
+      // TODO: 触发时机?
+      initShape(canvas, layerIndex)
     }
 
     return {
