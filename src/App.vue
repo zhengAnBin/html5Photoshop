@@ -80,7 +80,7 @@
 
 <script lang="ts">
 
-import { defineComponent, ref, reactive, watch } from 'vue'
+import { defineComponent, ref, reactive, watch, onMounted } from 'vue'
 import { initShape, setPalette, getPalette, createLayer, setShapeType } from './handle'
 
 export default defineComponent({
@@ -155,11 +155,13 @@ export default defineComponent({
       canvas = layer
       layerIndex = index
       dialogFormVisible.value = false
-
+      
       // TODO: 触发时机?
       initShape(canvas, layerIndex)
     }
 
+    onMounted(() => newDocument())
+    
     return {
       menuList,
       dialogFormVisible,

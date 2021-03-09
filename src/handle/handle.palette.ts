@@ -1,8 +1,8 @@
 /**
- * 掉色板
+ * 调色板
  */
 
-let backgroundColor: string = '#FFFFFF', 
+let backgroundColor: string = '#E41414', 
     foregroundColor: string = '#FFFFFF'
 
 type paletteType = 'background' | 'foreground'

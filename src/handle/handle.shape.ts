@@ -28,10 +28,10 @@ type shapeAllType =
 type lineType = 'fullLine' | 'dottedLine'
 
 /**
- * sx 起点x坐标
- * sy 起点y坐标
- * ex 终点x坐标
- * ey 终点y坐标
+ * sx 起点x坐标,
+ * sy 起点y坐标,
+ * ex 终点x坐标,
+ * ey 终点y坐标,
  */
 export type drawCoordinate = {
     sx: number
@@ -40,36 +40,16 @@ export type drawCoordinate = {
     ey: number
 }
 
-/**
- * 
- * @param coordinate 坐标
- * @param context canvas 上下文
- * @param type 绘制类型
- */
-export function drawRect(
-    coordinate: drawCoordinate,
-    context: CanvasRenderingContext2D,
-    type: lineType
-){
-    reRender()
-    if(type === 'fullLine') {
-        drawRectFullLine(context, coordinate)
-    } else if(type === 'dottedLine') {
-        drawRectDottedLine(context, coordinate)
-    } else {
-        console.error(` is not draw type `)
-    }
-}
-
 let 
     layerIndex: number,
+
     startX: number, 
     startY: number, 
     endX: number, 
     endY: number,
+
     width: number,
     height: number
-
 
 let shapeType: shapeAllType
 
@@ -107,6 +87,8 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
             }, 20)
         }
         
+        endX = x
+        endY = y
     }
 
     // 鼠标按下
@@ -125,6 +107,7 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
             drawRectDottedLineAnimation(context)
         } else if(shapeType === 'ellipse dottedLine') {
             // 动态虚线椭圆形
+            drawEllipseDottedLineAnimation(context)
         }
         
         canvas.removeEventListener('mousemove', mousemove)
@@ -152,33 +135,68 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
         const isCtrl = event.ctrlKey || event.metaKey;
         const isAlt = event.altKey
 
-        if(nKeyCode === 46 && isCtrl) {
-            // Ctrl + delete 填充背景色
-            let background = getPalette('background') as string
-            context.fillStyle = background
-            context.fillRect(
-                startX, 
-                startY, 
-                (endX - startX), 
-                (endY - startY)
-            )
-            // TODO: 将状态保存在绘制队列中
-            pushStatus(layerIndex, {
-                type: 'rect',
-                position: {
+        if(nKeyCode === 46 && isCtrl) { // Ctrl + delete 填充背景色
+
+            if(shapeType === 'rect dottedLine') {
+                
+                let background = getPalette('background') as string
+                context.fillStyle = background
+                context.fillRect(
+                    startX, 
+                    startY, 
+                    (endX - startX), 
+                    (endY - startY)
+                )
+
+                // TODO: 将状态保存在绘制队列中
+                pushStatus(layerIndex, {
+                    type: 'rect',
+                    position: {
+                        sx: startX,
+                        sy: startY,
+                        ex: endX,
+                        ey: endY
+                    },
+                    positionFill: background,
+                })
+            }
+
+            if(shapeType === 'ellipse dottedLine') {
+                
+                const { x, y, radiusX, radiusY } = ellipseCircle({
                     sx: startX,
                     sy: startY,
                     ex: endX,
                     ey: endY
-                },
-                positionFill: background,
-            })
+                })
+                
+                let background = getPalette('background') as string
+
+                context.beginPath()
+                context.fillStyle = background
+                context.ellipse(x, y, radiusX, radiusY, 0, 0, 2 * Math.PI)
+                context.fill()
+
+                pushStatus(layerIndex, {
+                    type: 'ellipse',
+                    position: {
+                        sx: startX,
+                        sy: startY,
+                        ex: endX,
+                        ey: endY
+                    },
+                    positionFill: background,
+                })
+            }
+            
         }
 
         if(nKeyCode === 46 && isAlt) {
             // Alt + delete 填充前景色
             let foreground = getPalette('foreground') as string
+
             context.fillStyle = foreground
+
             context.fillRect(
                 startX, 
                 startY, 
@@ -206,42 +224,86 @@ function move(
 ){
 
     switch(type) {
-        case 'rect fullLine': 
+        case 'rect fullLine' :
             // 实线矩形
             drawRect(coordinate, context, 'fullLine')
             break;
-        case 'rect dottedLine':
+        case 'rect dottedLine' :
             drawRect(coordinate, context, 'dottedLine')
             // 虚线矩形
             break;
         case 'rect fillet fullLine' :
             // 实线圆角矩形
             break;
-        case 'polygon fullLine':
+        case 'polygon fullLine' :
             // 实线多边形
             break;
-        case 'line fullLine':
+        case 'line fullLine' :
             // 直线
             break;
-        case 'ellipse fullLine':
+        case 'ellipse fullLine' :
             // 实线椭圆形
             drawEllipse(coordinate, context, 'fullLine')
             break;
-        case 'ellipse dottedLine':
+        case 'ellipse dottedLine' :
             drawEllipse(coordinate, context, 'dottedLine')
             // 虚线椭圆形
             break;
-        default:
+        default :
             return console.error(`is not type class`)
     }
 }
 
-export function fillRect(context: CanvasRenderingContext2D, coordinate: drawCoordinate, color: string) {
+/**
+ * 矩形填充颜色
+ */
+export function fillRect(
+    context: CanvasRenderingContext2D, 
+    coordinate: drawCoordinate, 
+    color: string
+) {
     const { sx, sy, ex, ey } = coordinate
     context.beginPath()
     context.fillStyle = color
     context.fillRect(sx, sy, (ex - sx), (ey - sy))
     context.closePath()
+}
+
+/**
+ * 椭圆形填充颜色
+ */
+export function fillEllipse(
+    context: CanvasRenderingContext2D, 
+    coordinate: drawCoordinate, 
+    color: string
+){
+    const { x, y, radiusX, radiusY } = ellipseCircle(coordinate)
+    context.beginPath()
+    context.fillStyle = color
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, 2 * Math.PI)
+    context.fill()
+    context.closePath()
+}
+
+/**
+ * 
+ * @param coordinate 坐标
+ * @param context canvas 上下文
+ * @param type 绘制类型
+ */
+export function drawRect(
+    coordinate: drawCoordinate,
+    context: CanvasRenderingContext2D,
+    type: lineType
+){
+    reRender()
+    if(type === 'fullLine') {
+        drawRectFullLine(context, coordinate)
+    } else if(type === 'dottedLine') {
+        drawRectDottedLine(context, coordinate)
+    } else {
+        console.error(` is not draw type `)
+    }
 }
 
 /**
@@ -314,7 +376,7 @@ function drawRectDottedLineToVertical(sx: number, sy: number, moveY: number, con
         }
     }
 
-    context.setLineDash([ dottedLineBase, dottedLineBase ]);
+    context.setLineDash([ dottedLineBase ]);
     context.moveTo(sx, sy > moveY ? sy - baseSpeed : sy + baseSpeed);
     context.lineTo(sx, moveY);
     context.stroke();
@@ -367,19 +429,30 @@ function drawRectDottedLineAnimation(context: CanvasRenderingContext2D){
         ex: endX,
         ey: endY
     }, context, 'dottedLine')
+
     baseSpeed = Number((baseSpeed + speed).toFixed(2))
     AnimationControl = requestAnimationFrame(() => drawRectDottedLineAnimation(context))
 }
 
 
-// --------------------- 绘制圆形 ---------------------------
 
-let ellipseSpeed = 0; 
+// -------------------------------- 绘制圆形 -------------------------------------
+
+
+
+let ellipseSite = 0; 
+
+const 
+    ellipseDash = 4,
+    ellipseSpeed = 0.003,
+    ellipseSpeedBase = ellipseDash / 10, 
+    resetEllipseSpeed = 0.05;
 
 /**
  * 绘制圆形
  */
 function drawEllipse(coordinate: drawCoordinate, context: CanvasRenderingContext2D, type: lineType){
+    reRender()
     if(type === 'fullLine') {
         drawEllipseFullLine(context, coordinate)
     } else if(type === 'dottedLine') {
@@ -390,49 +463,72 @@ function drawEllipse(coordinate: drawCoordinate, context: CanvasRenderingContext
 }
 
 /**
- * 绘制虚线椭圆
- * @param context 
- * @param coordinate 
+ * 绘制动态虚线椭圆
  */
 function drawEllipseDottedLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
 
     const { x, y, radiusX, radiusY } = ellipseCircle(coordinate)
 
-    if(!context.ellipse) {
-        return console.error('请将浏览器版本更新到最高。或下载最新的chomre浏览器')
-    }
+    context.setLineDash([ ellipseDash ])
 
-    context.setLineDash([4])
-
-    if(ellipseSpeed > 0.4) {
-        context.beginPath()
-        context.ellipse(x, y, radiusX, radiusY, 0, 0 + (ellipseSpeed - 0.4), ellipseSpeed)
+    if(ellipseSite > ellipseSpeedBase) {
+        context.beginPath();
+        context.ellipse(x, y, radiusX, radiusY, 0, 0, ellipseSite - ellipseSpeedBase);
         context.stroke();
     }
 
-    context.beginPath()
-    context.ellipse(x, y, radiusX, radiusY, 0, 0 + ellipseSpeed, Math.PI)
+    context.beginPath();
+    context.ellipse(x, y, radiusX, radiusY, 0, 0 + ellipseSite, Math.PI);
     context.stroke();
-    
-    if(ellipseSpeed > 0.4) {
-        context.beginPath()
-        context.ellipse(x, y, radiusX, radiusY, 0, Math.PI, Math.PI + ellipseSpeed)
+
+    if(ellipseSite > ellipseSpeedBase) {
+        context.beginPath();
+        context.ellipse(x, y, radiusX, radiusY, 0, Math.PI, Math.PI + (ellipseSite - ellipseSpeedBase));
         context.stroke();
     }
 
-    context.beginPath()
-    context.ellipse(x, y, radiusX, radiusY, 0, Math.PI + ellipseSpeed, 2 * Math.PI)
+    context.beginPath();
+    context.ellipse(x, y, radiusX, radiusY, 0, Math.PI + ellipseSite, 2 * Math.PI);
     context.stroke();
 
 }
 
 /**
+ * 开启动态虚线
+ */
+function drawEllipseDottedLineAnimation(context: CanvasRenderingContext2D){
+
+    if(ellipseSite >= resetEllipseSpeed) {
+        ellipseSite = 0
+    }
+
+    context.clearRect(0, 0, width, height)
+    drawEllipse(
+        {
+            sx: startX,
+            sy: startY,
+            ex: endX,
+            ey: endY
+        },
+        context, 
+        'dottedLine'
+    )
+
+    ellipseSite = ellipseSite + ellipseSpeed
+
+    AnimationControl = requestAnimationFrame(() => drawEllipseDottedLineAnimation(context))
+}
+
+/**
  * 绘制实线椭圆
- * @param context 
- * @param coordinate 
  */
 function drawEllipseFullLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
+    const { x, y, radiusX, radiusY } = ellipseCircle(coordinate)
 
+    context.beginPath();
+    context.ellipse(x, y, radiusX, radiusY, 0, 0, 2 * Math.PI);
+    context.stroke();
+    context.closePath();
 }
 
 /**
@@ -440,7 +536,7 @@ function drawEllipseFullLine(context: CanvasRenderingContext2D, coordinate: draw
  */
 function ellipseCircle(coordinate: drawCoordinate){
     const { sx, sy, ex, ey } = coordinate
-    console.log(sx, sy)
+
     let width = (ex - sx) / 2,
         longth = (ey - sy) / 2
     return { 

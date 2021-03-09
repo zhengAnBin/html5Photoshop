@@ -1,5 +1,5 @@
 import { cloneDeep } from './handle.common'
-import { fillRect } from './handle.shape'
+import { fillRect, fillEllipse } from './handle.shape'
 /**
  * 图层移动
  */
@@ -35,7 +35,7 @@ export interface currentLayer {
         zindex: number
         canvas: HTMLCanvasElement
         status: {
-            type: 'rect',
+            type: 'rect' | 'ellipse',
             position: any,
             positionFill: string
         }[]
@@ -52,8 +52,15 @@ export function reRender(){
         if(l.status.length === 0) { return }
         let context = l.canvas.getContext('2d') as CanvasRenderingContext2D
         l.status.forEach(s => {
-            if(s.type === 'rect') {
-                fillRect(context, s.position, s.positionFill)
+            switch(s.type) {
+                case 'rect':
+                    fillRect(context, s.position, s.positionFill)
+                    break;
+                case 'ellipse':
+                    fillEllipse(context, s.position, s.positionFill)
+                    break;
+                default:
+                    return ''
             }
         })
     })
@@ -72,7 +79,6 @@ export function createLayer(
     type: bgType, 
     container: HTMLElement
 ){
-    
     // 创建一个canvas html元素
     const layer = document.createElement('canvas') as HTMLCanvasElement
 
