@@ -8,8 +8,8 @@
 export function getPointOnCanvas(canvas: HTMLCanvasElement,x: number, y: number) {
     const rect = canvas.getBoundingClientRect();
     return {
-        x: x - rect.left,
-        y: y - rect.top
+        x: Number(x.toFixed()) - rect.left,
+        y: Number(y.toFixed()) - rect.top
     }
 }
 

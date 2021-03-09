@@ -81,7 +81,13 @@
 <script lang="ts">
 
 import { defineComponent, ref, reactive, watch, onMounted } from 'vue'
-import { initShape, setPalette, getPalette, createLayer, setShapeType } from './handle'
+import { 
+  initShape, 
+  setPalette, 
+  getPalette, 
+  createLayer, 
+  setShapeType 
+} from './handle'
 
 export default defineComponent({
   name: 'App',
@@ -138,6 +144,20 @@ export default defineComponent({
             layer.style.cursor = 'crosshair'
           }
         }]
+      },
+      {
+        name: '矩形工具',
+        icon: 'el-icon-s-grid',
+        children: [
+          {
+            name: '矩形工具',
+            onClick: () => {
+              if(!canvas) { return ; }
+
+              setShapeType('rect fullLine')
+            }
+          }
+        ]
       }
     ])
 

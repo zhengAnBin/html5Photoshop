@@ -7,12 +7,6 @@ import { pushStatus, reRender } from './handle'
 import { currentLayer } from './handle'
 
 /**
- * 在 Photoshop 中矩形有两种
- * 一种是矩形选框工具
- * 一种是矩形工具
- */
-
-/**
  * fullLine = 实线
  * dottedLine = 虚线
  */
@@ -314,10 +308,10 @@ export function drawRect(
 function drawRectFullLine(context: CanvasRenderingContext2D, coordinate: drawCoordinate){
     const { sx, sy, ex, ey } = coordinate
     context.beginPath();
-    context.strokeRect(sx, sy, ex - sx, ey - sy);
-    // TODO: 获取前景色色板并且进行填充
-    context.strokeStyle = getPalette('background') as string
-    context.fill()
+    context.strokeStyle = '#1884EC'
+    context.lineWidth = 2
+    context.rect(sx, sy, ex - sx, ey - sy);
+    context.stroke()
     context.closePath();
 }
 
