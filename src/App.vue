@@ -156,6 +156,22 @@ export default defineComponent({
 
               setShapeType('rect fullLine')
             }
+          },
+          {
+            name: '圆角矩形工具',
+            onClick: () => {
+              if(!canvas) { return ; }
+
+              setShapeType('rect fillet fullLine')
+            }
+          },
+          {
+            name: '椭圆形工具',
+            onClick: () => {
+              if(!canvas) { return ; }
+
+              setShapeType('ellipse fullLine')
+            }
           }
         ]
       }

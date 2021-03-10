@@ -1,7 +1,17 @@
 import { shapeAllType, drawCoordinate } from './index'
 import { getPointOnCanvas } from '../handle.common'
-import { drawRectDottedLineAnimation, drawRect, fillRect } from './rect'
-import { drawEllipseDottedLineAnimation, drawEllipse, fillEllipse } from './ellipse'
+import { 
+    drawRectDottedLineAnimation, 
+    drawRect, 
+    fillRect,
+    drawRoundRect,
+    fillRoundRect
+} from './rect'
+import { 
+    drawEllipseDottedLineAnimation,
+    drawEllipse, 
+    fillEllipse 
+} from './ellipse'
 import { drawAcme } from './acme'
 import { getPalette } from '../handle.palette'
 import { pushStatus } from '../handle'
@@ -51,17 +61,13 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
     height = canvas.height
     layerIndex = index
 
-    let timer: number | null
-    let STATUS: string
-
     // 鼠标移动
     const mousemove =  (event: MouseEvent) => {
         if(!shapeType) { return ; }
 
         let { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
 
-        // 此处不可以使用节流函数优化执行效率!
-
+        // FIX: 此处不可以使用节流函数优化执行效率!
         clear()
         move({
             sx: startX,
@@ -69,7 +75,7 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
             ex: x,
             ey: y
         }, context, shapeType)
-
+        
         endX = x
         endY = y
     }
@@ -77,12 +83,8 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
     // 鼠标按下
     const mousedown = (event: MouseEvent) => {
 
-        STATUS = 'DWON'
-
         cancelAnimationFrame(AnimationControl)
-
         const { x, y } = getPointOnCanvas(canvas, event.pageX, event.pageY)
-
         canvas.addEventListener('mousemove', mousemove)
 
         startX = x
@@ -91,7 +93,7 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
     
     // 鼠标松开
     const mouseup = () => {
-        STATUS = 'UP'
+
         getComputedStyle(canvas)
         up({
             sx: startX,
@@ -138,7 +140,6 @@ export function initShape(canvas: HTMLCanvasElement, index: number) {
                     ey: endY
                 }, background)
 
-                // TODO: 将状态保存在绘制队列中
                 pushStatus(layerIndex, {
                     type: 'rect',
                     position: {
@@ -210,6 +211,18 @@ export function setShapeType(type: shapeAllType) {
     shapeType = type
 }
 
+const cacheRadius = (function (){
+    let radius: number = 0
+    let maxRadius = 10
+    return {
+        set: (s: number, e: number) => {
+            radius = Math.abs(s - e) / 3
+            return radius > maxRadius ? maxRadius : radius
+        },
+        get: () => radius > maxRadius ? maxRadius : radius
+    }
+})()
+
 function move(
     coordinate: drawCoordinate,
     context: CanvasRenderingContext2D,
@@ -226,6 +239,7 @@ function move(
             // 虚线矩形
             break;
         case 'rect fillet fullLine' :
+            drawRoundRect(context, coordinate, cacheRadius.set(coordinate.sx, coordinate.ex));
             // 实线圆角矩形
             break;
         case 'polygon fullLine' :
@@ -252,10 +266,14 @@ function up(
     context: CanvasRenderingContext2D,
     type: shapeAllType
 ){
+    const { sx, sy, ex, ey } = coordinate;
+    let background = getPalette('background') as string
     switch(type) {
         case 'rect fullLine' :
             // 实线矩形
-            const { sx, sy, ex, ey } = coordinate;
+            // 填充前景色
+            fillRect(context, coordinate, background)
+            // 绘制顶点
             drawAcme(context, 
                 [
                     { x: sx, y: sy },
@@ -264,12 +282,35 @@ function up(
                     { x: ex, y: ey }
                 ]
             )
+            // 保存矩形信息
+            pushStatus(layerIndex, {
+                type: 'rect',
+                position: coordinate,
+                positionFill: background,
+            })
             break;
         case 'rect dottedLine' :
             drawRectDottedLineAnimation()
             // 虚线矩形
             break;
         case 'rect fillet fullLine' :
+            let r = cacheRadius.get()
+            fillRoundRect(context, coordinate, r, background)
+            if(ex < sx) {
+                r *= -1
+            }
+            drawAcme(context, 
+                [
+                    { x: sx + r, y: sy },
+                    { x: sx, y: sy + r },
+                    { x: ex - r, y: sy },
+                    { x: ex, y: sy + r },
+                    { x: sx + r, y: ey },
+                    { x: sx, y: ey - r },
+                    { x: ex - r, y: ey },
+                    { x: ex, y: ey - r },
+                ]
+            )
             // 实线圆角矩形
             break;
         case 'polygon fullLine' :
@@ -280,7 +321,16 @@ function up(
             break;
         case 'ellipse fullLine' :
             // 实线椭圆形
+            fillEllipse(context, coordinate, background)
 
+            drawAcme(context, 
+                [
+                    { x: ((ex - sx) / 2) + sx, y: sy },
+                    { x: ((ex - sx) / 2) + sx, y: ey },
+                    { x: sx, y: ((ey - sy) / 2) + sy },
+                    { x: ex, y: ((ey - sy) / 2) + sy },
+                ]
+            )
             break;
         case 'ellipse dottedLine' :
             drawEllipseDottedLineAnimation()

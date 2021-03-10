@@ -11,7 +11,7 @@ type came = {
 }[]
 
 export function drawAcme(context: CanvasRenderingContext2D, came: came){
-    console.log(came)
+
     came.forEach(point => {
         context.beginPath()
         context.fillStyle = LINR_COLOR;

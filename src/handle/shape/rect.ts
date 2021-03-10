@@ -184,3 +184,132 @@ export function drawRectDottedLineAnimation(){
         requestAnimationFrame(drawRectDottedLineAnimation)
     )
 }
+
+/**
+ * 圆角矩形
+ */
+export function drawRoundRect(
+    context: CanvasRenderingContext2D, 
+    coordinate: drawCoordinate,
+    r: number
+){  
+    let { sx, sy, ex, ey } = coordinate
+
+    if(ex < sx) {
+        [ ex, sx ] = [ sx, ex ];
+        [ ey, sy ] = [ sy, ey ];
+    }
+
+    const w = ex - sx
+    const h = ey - sy
+
+    r = r * Math.sign(ex - sx)
+
+    context.clearRect(0, 0, 500, 500)
+    context.beginPath()
+    context.strokeStyle = '#1884EC'
+
+    // 左上角
+    // if(r > 0) {
+    //     context.arc(sx + r, sy + r, r, Math.PI, Math.PI * 1.5)
+    // } else if(r < 0) {
+    //     context.arc(sx - nr, sy - nr, nr, 0, Math.PI * 0.5)
+    // }
+    context.arc(sx + r, sy + r, r, Math.PI, Math.PI * 1.5)
+
+    // border-top
+    context.moveTo(sx + r, sy)
+    context.lineTo(sx + w - r, sy)
+
+    // 右上角
+    // if(r > 0) {
+    //     context.arc(sx + w - r, sy + r, r, Math.PI * 1.5, Math.PI * 2)
+    // } else if(r < 0) {
+    //     context.arc(sx + w + nr, sy - nr, nr, Math.PI * 0.5, Math.PI)
+    // }
+    context.arc(sx + w - r, sy + r, r, Math.PI * 1.5, Math.PI * 2)
+    // border-right
+    context.moveTo(sx + w, sy + r)
+    context.lineTo(sx + w, sy + h - r)
+
+    // 右下角
+    // if(r > 0) {
+    //     context.arc(sx + w - r, sy + h - r, r, 0, Math.PI * 0.5)
+    // } else if(r < 0) {
+    //     context.arc(sx + w + nr, sy + h + nr, nr, Math.PI, Math.PI * 1.5)
+    // }
+    context.arc(sx + w - r, sy + h - r, r, 0, Math.PI * 0.5)
+    // border-bottom
+    context.moveTo(sx + w - r, sy + h)
+    context.lineTo(sx + r, sy + h)
+    
+    // 左下角
+    // if(r > 0) {
+    //     context.arc(sx + r, sy + h - r, r, Math.PI * 0.5, Math.PI)
+    // } else if(r < 0) {
+    //     context.arc(sx - nr, sy + h + nr, nr, Math.PI * 1.5, Math.PI * 2)
+    // }
+    context.arc(sx + r, sy + h - r, r, Math.PI * 0.5, Math.PI)
+    // border-left
+    context.moveTo(sx, sy + h - r)
+    context.lineTo(sx, sy + r)
+
+    context.stroke()
+    
+    context.closePath()
+}
+
+/**
+ * 此绘制方法适合仅局限与填充颜色
+ */
+function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, color: string) {
+    // 开始绘制
+    ctx.beginPath()
+    ctx.fillStyle = color
+    ctx.arc(x + r, y + r, Math.abs(r), Math.PI, Math.PI * 1.5)
+
+    // border-top
+    ctx.moveTo(x + r, y)
+    ctx.lineTo(x + w - r, y)
+    ctx.lineTo(x + w, y + r)
+    // 右上角
+    ctx.arc(x + w - r, y + r, Math.abs(r), Math.PI * 1.5, Math.PI * 2)
+
+    // border-right
+    ctx.lineTo(x + w, y + h - r)
+    ctx.lineTo(x + w - r, y + h)
+    // 右下角
+    ctx.arc(x + w - r, y + h - r, Math.abs(r), 0, Math.PI * 0.5)
+
+    // border-bottom
+    ctx.lineTo(x + r, y + h)
+    ctx.lineTo(x, y + h - r)
+    // 左下角
+    ctx.arc(x + r, y + h - r, Math.abs(r), Math.PI * 0.5, Math.PI)
+
+    // border-left
+    ctx.lineTo(x, y + r)
+    ctx.lineTo(x + r, y)
+
+    ctx.fill()
+    ctx.closePath()
+}
+
+export function fillRoundRect(
+    context: CanvasRenderingContext2D, 
+    coordinate: drawCoordinate,
+    r: number,
+    color: string
+){
+    let { sx, sy, ex, ey } = coordinate
+
+    if(ex < sx) {
+       [ ex, sx ] = [ sx, ex ];
+       [ ey, sy ] = [ sy, ey ];
+    }
+
+    const w = ex - sx
+    const h = ey - sy
+
+    roundRect(context, sx, sy, w, h, r, color)
+}
