@@ -15,6 +15,8 @@ import {
 import { drawAcme } from './acme'
 import { getPalette } from '../handle.palette'
 import { pushStatus } from '../handle'
+import { drawPolygon, fillPolygon } from './polygon'
+
 
 let 
     layerIndex: number,
@@ -243,6 +245,7 @@ function move(
             // 实线圆角矩形
             break;
         case 'polygon fullLine' :
+            drawPolygon(coordinate, context)
             // 实线多边形
             break;
         case 'line fullLine' :
@@ -314,6 +317,7 @@ function up(
             // 实线圆角矩形
             break;
         case 'polygon fullLine' :
+            // drawPolygon
             // 实线多边形
             break;
         case 'line fullLine' :

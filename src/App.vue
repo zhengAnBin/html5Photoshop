@@ -172,6 +172,14 @@ export default defineComponent({
 
               setShapeType('ellipse fullLine')
             }
+          },
+          {
+            name: '多边形工具',
+            onClick: () => {
+              if(!canvas) { return ; }
+
+              setShapeType('polygon fullLine')
+            }
           }
         ]
       }
@@ -234,7 +242,7 @@ export default defineComponent({
     height: calc(100vh - 30px);
     position: relative;
   }
-  .center-layer{
+  .center-layer {
     position: absolute;
     top: 50%;
     left: 50%;
